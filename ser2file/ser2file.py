@@ -12,7 +12,6 @@ if __name__=='__main__':
 		sys.exit(1)
 		pass
 	f = open(datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S") + '.csv', 'w+')
-	f.write('10ms;x;y;z;delta\n')
 	i = 0
 	while True:
 		line = ser.readline().decode('utf-8')
