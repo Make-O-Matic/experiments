@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+from subprocess import call
 import sys
 import serial
 import datetime
@@ -9,6 +10,10 @@ import json
 import ctypes
 
 csv_caption = ['rfid','ex','ey','ez','ax','ay','az','myo','key','sw','capsens','lastnr']
+stdaddr = '00:06:66:4F:B8:91'
+port = '/dev/rfcomm0'
+rate = 115200
+
 def unpack_pkg(stream):
 	pkg = struct.unpack('12sffffffHB', stream)
 	flags.asbyte = pkg[8]
@@ -29,9 +34,25 @@ class Flags(ctypes.Union):
 		("asbyte", c_uint8)]
 flags = Flags()
 
+def ftread(): # Fault tolerant read for connection loss
+	global ser
+	while True:
+		try:
+			return ser.read()
+		except serial.serialutil.SerialException:
+			ser.close()
+			ser = serial.Serial(port, rate, timeout=1)
+			pass
+
 if __name__=='__main__':
+	global ser
+	addr = str(raw_input("MAC[%s]: " % stdaddr))
+	if len(addr) is 0:
+		addr = stdaddr
+	call(['rfcomm', 'bind', port, '%s' % addr])
+#	call(['chmod', 'a+r', port]) # unnecessary after usermod -a -G dialout <user>
 	try:
-		ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=1)
+		ser = serial.Serial(port, rate, timeout=1)
 		print("opened " + ser.portstr)
 	except serial.SerialException:
 		print('could not open port')
@@ -42,15 +63,18 @@ if __name__=='__main__':
 		csv_f.writerow(csv_caption)
 		line = ""
 		try:
-			while True:
-				if ser.read() == '\0':
+			while True: # truncate first incomplete packet
+				if ftread() == '\0':
 					break
 			while True:
-				c = ser.read()
-				if c == '\0':
-					pkg = unpack_pkg(cobs.decode(line))
-					print(json.JSONEncoder().encode(pkg))
-					csv_f.writerow(pkg)
+				c = ftread()
+				if c == '\0': # got packet separator
+					try:
+						pkg = unpack_pkg(cobs.decode(line))
+						print(json.JSONEncoder().encode(pkg))
+						csv_f.writerow(pkg)
+					except (cobs.DecodeError, struct.error):
+						pass
 					line = ""
 				else:
 					line += c
@@ -58,3 +82,4 @@ if __name__=='__main__':
 			pass
 		f.close()
 	ser.close()
+	call(['rfcomm', 'release', port, '%s' % addr])
