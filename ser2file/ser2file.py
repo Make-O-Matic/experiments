@@ -9,24 +9,23 @@ import csv
 import json
 import ctypes
 
-csv_caption = ['rfid','ex','ey','ez','ax','ay','az','myo','key','sw','capsens','lastnr']
+csv_caption = ['rfid','ex','ey','ez','ax','ay','az','graspa','graspb','graspc','key','wear','lastnr']
 stdaddr = '00:06:66:4F:B8:91'
 port = '/dev/rfcomm0'
 rate = 115200
 
 def unpack_pkg(stream):
-	pkg = struct.unpack('12sffffffHB', stream)
-	flags.asbyte = pkg[8]
+	pkg = struct.unpack('12sffffffHHHB', stream)
+	flags.asbyte = pkg[10]
 	pkg = list(pkg)
-	pkg = tuple(pkg[:-1] + [flags.b.key,flags.b.sw,flags.b.capsens,flags.b.lastnr])
+	pkg = tuple(pkg[:-1] + [flags.b.key,flags.b.wear,flags.b.lastnr])
 	return pkg
 
 c_uint8 = ctypes.c_uint8
 class Flags_bits(ctypes.LittleEndianStructure):
 	_fields_ = [
 		("key", c_uint8, 1),
-		("sw", c_uint8, 1),
-		("capsens", c_uint8, 1),
+		("wear", c_uint8, 1),
 		("lastnr", c_uint8, 1),
 	]
 class Flags(ctypes.Union):
