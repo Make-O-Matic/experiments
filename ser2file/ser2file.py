@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from subprocess import call
 import sys
 import serial
@@ -70,7 +71,11 @@ if __name__=='__main__':
 				if c == '\0': # got packet separator
 					try:
 						pkg = unpack_pkg(cobs.decode(line))
-						print(json.JSONEncoder().encode(pkg))
+						print('%8.3f %+8.3f %+8.3f   ' % (pkg[1], pkg[2], pkg[3]), end='')
+						print('%+7.3f %+7.3f %+7.3f   ' % (pkg[4], pkg[5], pkg[6]), end='')
+						print('%4d %4d %4d   ' % (pkg[7], pkg[8], pkg[9]), end='')
+						print('%d %d %d  ' % (pkg[10], pkg[11], pkg[12]), end='')
+						print('%12s' % (pkg[0]))
 						csv_f.writerow(pkg)
 					except (cobs.DecodeError, struct.error):
 						pass
